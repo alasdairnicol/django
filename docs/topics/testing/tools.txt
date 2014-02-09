@@ -366,7 +366,39 @@ Use the ``django.test.Client`` class to make requests.
             Requests made with :meth:`~django.test.Client.login` go through the
             request middleware. If you need to control the environment, you can
             do so at :class:`~django.test.Client` instantiation or with the
-            `Client.defaults` attribute.
+            ``Client.defaults`` attribute.
+
+    .. method:: Client.simple_login(user, backend=None)
+
+	.. versionadded:: 1.7
+
+	The ``simple_login()`` method is similar to the
+	:meth:`login()` method. You may find it more convenient
+	to use than ``login()``, as it does not require authentication
+	credentials. Instead, you provide the user instance that you
+	wish to simulate logging in::
+
+            >>> c = Client()
+	    >>> user = User.objects.get(username='fred')
+            >>> c.simple_login(user)
+
+            # Now you can access a view that's only available to logged-in users.
+
+	Note that the user must be active. ``simple_login()`` returns
+	``True`` if the user was active and the login was successful.
+
+	By default, ``simple_login()`` simulates a successful login
+	using first authentication backend in your
+	:setting:`AUTHENTICATION_BACKENDS` setting. The optional
+	keyword argument ``backend`` can be used to specify a
+	different authentication backend. If you specify ``backend``,
+	it must be in your ``AUTHENTICATION_BACKENDS`` setting
+	otherwise the method will not work.
+
+	Requests made with ``simple_login`` go through the request
+	middleware. If you need to control the environment, you can do
+	so at :class:`~django.test.Client` instantiation or with the
+	``Client.defaults`` attribute.
 
     .. method:: Client.logout()
 
@@ -383,7 +415,7 @@ Use the ``django.test.Client`` class to make requests.
             Requests made with :meth:`~django.test.Client.logout` go through the
             request middleware. If you need to control the environment, you can
             do so at :class:`~django.test.Client` instantiation or with the
-            `Client.defaults` attribute.
+            ``Client.defaults`` attribute.
 
 Testing responses
 ~~~~~~~~~~~~~~~~~

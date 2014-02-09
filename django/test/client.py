@@ -581,6 +581,52 @@ class Client(RequestFactory):
         else:
             return False
 
+    def simple_login(self, user, backend=None):
+        """
+        Sets the Factory to appear as if user has successfully logged into
+        a site.
+
+        Returns True if login is possible; False if the user is
+        inactive, or if sessions framework is not available.
+        """
+        from django.contrib.auth import login
+        from django.conf import settings
+        if (user and user.is_active and
+                apps.is_installed('django.contrib.sessions')):
+            if backend is None:
+                backend = settings.AUTHENTICATION_BACKENDS[0]
+
+            user.backend = backend
+            engine = import_module(settings.SESSION_ENGINE)
+
+            # Create a fake request that goes through request middleware
+            request = self.request().wsgi_request
+
+            if self.session:
+                request.session = self.session
+            else:
+                request.session = engine.SessionStore()
+            login(request, user)
+
+            # Save the session values.
+            request.session.save()
+
+            # Set the cookie to represent the session.
+            session_cookie = settings.SESSION_COOKIE_NAME
+            self.cookies[session_cookie] = request.session.session_key
+            cookie_data = {
+                'max-age': None,
+                'path': '/',
+                'domain': settings.SESSION_COOKIE_DOMAIN,
+                'secure': settings.SESSION_COOKIE_SECURE or None,
+                'expires': None,
+            }
+            self.cookies[session_cookie].update(cookie_data)
+
+            return True
+        else:
+            return False
+
     def logout(self):
         """
         Removes the authenticated user's cookies and session object.

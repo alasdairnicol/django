@@ -688,6 +688,11 @@ Tests
   in :class:`~django.test.Client` instantiation and are processed through
   middleware.
 
+* :class:`~django.test.Client` has a new method
+  :meth:`~django.test.Client.simple_login`, which makes it easier to
+  simulate a user logging in, because you don't have to supply
+  authentication credentials.
+
 * :meth:`~django.test.TransactionTestCase.assertNumQueries` now prints
   out the list of executed queries if the assertion fails.
 

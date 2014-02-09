@@ -26,6 +26,8 @@ from django.core import mail
 from django.test import Client, TestCase, RequestFactory
 from django.test import override_settings
 
+from django.contrib.auth.models import User
+
 from .views import get_view
 
 
@@ -364,6 +366,46 @@ class ClientTest(TestCase):
         "Request a page that is protected with @login, but use an inactive login"
 
         login = self.client.login(username='inactive', password='password')
+        self.assertFalse(login)
+
+    def test_view_with_simple_login(self):
+        """
+        Request a page that is protected with @login_required and use
+        client.simple_login to log the user in.
+        """
+
+        # Get the page without logging in. Should result in 302.
+        response = self.client.get('/login_protected_view/')
+        self.assertRedirects(response, 'http://testserver/accounts/login/?next=/login_protected_view/')
+
+        # Log in
+        user = User.objects.get(username='testclient')
+        login = self.client.simple_login(user)
+        self.assertTrue(login, 'Could not log in')
+        self.assertEqual(user.backend, "django.contrib.auth.backends.ModelBackend")
+
+        # Request a page that requires a login
+        response = self.client.get('/login_protected_view/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['user'].username, 'testclient')
+
+    @override_settings(AUTHENTICATION_BACKENDS=("django.contrib.auth.backends.RemoteUserBackend",))
+    def test_simple_login_backend(self):
+        "Use simple_login and specify backend"
+        user = User.objects.get(username='testclient')
+        backend = "django.contrib.auth.backends.RemoteUserBackend"
+        self.client.simple_login(user, backend=backend)
+        self.assertEqual(backend, user.backend)
+
+        # Request a page that requires a login
+        response = self.client.get('/login_protected_view/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['user'].username, 'testclient')
+
+    def test_simple_login_with_inactive_user(self):
+        "simple_login does not work with an inactive user"
+        user = User.objects.get(username='inactive')
+        login = self.client.simple_login(user)
         self.assertFalse(login)
 
     def test_logout(self):
