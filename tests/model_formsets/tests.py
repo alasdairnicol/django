@@ -1225,6 +1225,32 @@ class ModelFormsetTest(TestCase):
         formset = FormSet(initial=[{'authors': Author.objects.all()}], data=data)
         self.assertFalse(formset.extra_forms[0].has_changed())
 
+    def test_model_formset_instance_not_in_queryset(self):
+        FormSet = modelformset_factory(Product, fields='__all__', extra=0)
+        red_car = Product(slug="red_car")
+        red_car.save()
+        blue_car = Product(slug="blue_car")
+        blue_car.save()
+
+        data = {
+            'form-TOTAL_FORMS': 1,
+            'form-INITIAL_FORMS': 1,
+            'form-MAX_NUM_FORMS': '',
+            'form-0-id': str(blue_car.id), # use an id of a product that is not in the queryset
+            'form-0-slug': 'blue_bike',
+        }
+        formset = FormSet(queryset=Product.objects.filter(slug="red_car"), data=data)
+        self.assertEqual(len(Product.objects.all()), 2)
+        products = formset.get_queryset()
+        self.assertEqual(len(products), 1)
+
+        if formset.is_valid():
+            formset.save()
+
+        blue_car = Product.objects.get(id=blue_car.id)
+        self.assertEqual(blue_car.slug, "blue_car") # blue car should not have been changed
+        self.assertEqual(len(Product.objects.all()), 2) # no new products should be created
+
     def test_prevent_duplicates_from_with_the_same_formset(self):
         FormSet = modelformset_factory(Product, fields="__all__", extra=2)
         data = {
